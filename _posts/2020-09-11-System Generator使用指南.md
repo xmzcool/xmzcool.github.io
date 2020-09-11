@@ -1,3 +1,16 @@
+---
+layout:     post
+title:      System Generator使用指南
+subtitle:   Using Guide
+date:       2020-09-11
+author:     MZ
+header-img: img/post-bg-SG.jpg
+catalog: true
+tags:
+    - Using Guide
+
+---
+
 # System Generator使用指南
 
 > 学习前人，启发后人。
