@@ -200,6 +200,76 @@ Analyzer type中可以设置
 
 ## 4. 常见模块以及参数介绍
 
+### 4.1 Sysgen中的信号类型
+
+为了提高硬件仿真精度，Sysgen中的模块采用了任意精度的定点数，最大支持4096位定点数，而在simulink中的连续时间的信号必须经过Gateway In模块采样成FPGA设计中的信号使用，输出经Gateway Out转变为simulink中的信号才可以实现两者互联。Sysgen共有如下3种信号类型：
+
+![](https://gitee.com/xmzcool/bloglmage/raw/master/img/Snipaste_2020-09-12_10-47-36.png)
+
+- Boolean型，一些使能信号，开关信号要求输入为bool型。显示为Fix_N_n，N表示数据位宽，n表示小数位宽。
+- Fixed-point型，定点数，可以指定数据位宽和小数位宽，其中可以分为以下两种：
+  - Signed：有符号型，规则遵循2‘s comp，也就是补码。
+  - Unsigned：无符号型。
+- Floating-point型，浮点数，可以分为以下三种
+  - Single：单精度浮点数，数据位宽32位，1（符号位，sign bit） + 8（指数位，exponent width） + 24（有效精度，significand precision）。
+  - Double：双精度浮点数，数据位宽64位，1（符号位，sign bit） + 11（指数位，exponent width） + 53（有效精度，significand precision）。
+  - Costom：用户自定义指数位和小数位位宽。
+
+FPGA设计可以考虑使用**定点数据类型**（Fixed-point）或**浮点数据类型**（Floating-point），但后者消耗的资源几乎是前者的十几倍甚至更多，设计中通常都采用定点数据格式。
+
+**与信号类型相关的模块：**
+
+System Generator中有两个与此相关的block：Convert和Reinterpret，都可以进行数据的转换。
+
+- **Reinterpret**
+
+  这个block可以完成以下数据转换功能：
+
+  - 将无符号数转换为带符号数；
+  - 将带符号数转换为无符号数；
+  - 通过重新规定小数点位置来定义数据范围。
+
+  需要注意的是，“**转换**”在这个block中的含义更接近于其英文直译“**重新解释**”。事实上，数据在经过该block后，其位宽与每一位的值都没有发生任何改变，变化的只有其所表示的“**意义**”。一个二进制数是无符号数还是带符号数、小数点在哪一位仅仅取决于设计者如何规定和看待它。而Reinterpret改变的便是这种**“规定和看待”方式**。
+
+  比如，“1100”这个数，当视作**UFix_4_0**（无符号定点数、4Bits位宽、小数部分0bit）时，其值为12；当视作**Fix_4_2**（带符号定点数、4Bits位宽、小数部分2Bits）时，其值为-1。因为reinterpret实现的只是一种意义上的转换，因此其在转换为FPGA设计后，**不会消耗任何资源**。
+
+  既然reinterpret的输出和输入完全相同，那么加入此模块有什么作用？
+
+  - 从FPGA设计转换到Simulink环境中时会按设定的“意义”解析数据格式；
+  - 完成不同格式数据之间的的拼接。
+
+  <img src="https://gitee.com/xmzcool/bloglmage/raw/master/img/Snipaste_2020-09-12_11-10-10.png" style="zoom:60%;" />
+
+  选中“Force Arithmetic Type”后，输出数据格式的“意义”将转换为（没有选中，则输出与输入的表征意义相同）：无符号数（**Unsigned**）、带符号数二进制补码（**Signed(2’s comp)**）、浮点数（**Floating-point**）。
+
+  选中“Force Binary Point”后，可以重新规定输出数据的小数点位置。比如设置为31时，表明数据中的低31Bits为小数部分。
+
+- **Convert**
+
+  该block不仅可以完成数据类型的转换，还具有如下特性：
+
+  - 重新设置数据的量化、溢出方式；
+  - 重新设置定点数格式（进行数据截位、转换）。
+
+  <img src="https://gitee.com/xmzcool/bloglmage/raw/master/img/Snipaste_2020-09-12_11-19-14.png" style="zoom: 50%;" />
+
+  其中大部分参数设置方法与Gateway In模块的设置完全相同，这里只讲述两者不同的地方。
+
+  1. Convert模块的量化方式可以配置为“**Round(unbiased: even values)**”，这是针对“四舍五入”量化方式的缺点所作的改进:
+
+  - 传统的四舍五入所有的中间值（如1.5、2.5）都会向更大的值量化，即**不是完全对称**的，这样会导致一组数据量化后平均值**高于**量化前的平均值。
+  - unbiased: even values在处理中间值时会向更接近的偶数量化。比如1.5会量化为2；2.5仍然会量化为2（因为二者最接近的偶数都是2）。这样量化规则在整体上会呈现出**对称性**。
+
+  2. 选中“**Provide enable port**”后，block会增加一个en使能管脚，只有当使能有效时convert block才会执行数据转换功能，否则将保持当前状态不变。
+
+  3. **Latency**设置了Convert输出数据要经过多少个采样时钟周期的延时。注意不要混淆“采样时钟周期”和“FPGA时钟周期”的概念，在过采样系统中，一个采样时钟周期可能等于多个FPGA时钟周期。
+
+  Convert在导出到FPGA中时会以Floating-Point IP核的方式实现，“Implementation”标签下可以设置Latency在FPGA中的实现方式：
+
+  ●选中“Pipeline for maximum performance”时，**Latency以流水线的方式实现**，即在计算过程中增加中间级寄存器，以更多的资源实现更快的计算速度和更大的数据吞吐量。
+
+  ●未选中“Pipeline for maximum performance”时，**Latency以在IP核末尾增加一级移位寄存器的方式实现**，这样只是单纯的实现了延时功能。
+
 ## 5. 设计过程中的思考
 
 - System Generator进行系统建模到完成一般包含以下四个步骤：
