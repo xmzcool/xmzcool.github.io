@@ -198,9 +198,23 @@ Analyzer type中可以设置
 - 系统级设计角度，无需关心RTL设计细节以及一些IP核的具体使用方法。
 - 在设计的过程中查看时序和资源问题，节省设计时间。
 
-## 4. 常见模块以及参数介绍
+## 4. 常见参数介绍
 
-### 4.1 Sysgen中的信号类型
+- Precision
+
+  XILINX Blockset库中的模块在仿真计算时按任意精度定点数进行，大部分模块的计算精度可由开发人员定义，包括位数(Number of Bits)和小数位(Binary Point)，如下图所示。
+
+  ![](https://gitee.com/xmzcool/bloglmage/raw/master/img/Snipaste_2020-09-15_16-50-23.png)
+
+  在默认情况下，模块的输出为全精度(Full Precision)，提供了足够的精度以保证结果不会出错。大部分模块具有用户自定义精度(User-Defined Percision)选项，开发人员可自行确定数据的位数和小数位。
+
+## 5. 常见模块介绍
+
+只有XILINX模块才会在FPGA硬件中实现。
+
+### 5.1 
+
+### 5.2 Sysgen中的信号类型
 
 为了提高硬件仿真精度，Sysgen中的模块采用了任意精度的定点数，最大支持4096位定点数，而在simulink中的连续时间的信号必须经过Gateway In模块采样成FPGA设计中的信号使用，输出经Gateway Out转变为simulink中的信号才可以实现两者互联。Sysgen共有如下3种信号类型：
 
@@ -270,17 +284,33 @@ System Generator中有两个与此相关的block：Convert和Reinterpret，都�
 
   ●未选中“Pipeline for maximum performance”时，**Latency以在IP核末尾增加一级移位寄存器的方式实现**，这样只是单纯的实现了延时功能。
 
-### 4.2 Sysgen中的时钟
+### 5.3 Sysgen中的时钟
 
 相关时钟概念见5.2章节。下面介绍一下时钟相关的模块。
 
+下面举个例子：添加如下几个模块并连线。
+
+![](https://gitee.com/xmzcool/bloglmage/raw/master/img/Snipaste_2020-09-15_15-14-12.png)
+
+如上图，输入信号的速率在Gateway In模块中设置为1，而Up Sample分别设置为2、3、4(用两个速率为2 Up Sample的模块级联而成)，那么Simulink的系统时钟周期应该为1、1/2、 1/3、 1/4 的最大公因子1/12。信号时钟输出如下：
+
+![](https://gitee.com/xmzcool/bloglmage/raw/master/img/Snipaste_2020-09-15_15-30-08.png)
+
 - Clock Probe模块，在仿真中该模块被用来测试**系统速率运行**的时钟信号。**该模块仅用来仿真**，输出类型是双精度浮点数。当生成硬件时，该模块将被忽略。
 
-  下面举个例子：
+- Up sample和Down sample模块：可以进行采样率变换，SystemGenerator中可以设置不同颜色代表不同的采样率。可以点击Display-〉Sample Time中设置。双击设置可以看到：
 
-## 5. 设计过程中的思考
+  <img src="https://gitee.com/xmzcool/bloglmage/raw/master/img/Snipaste_2020-09-15_16-12-57.png" style="zoom:67%;" />
 
-### 5.1 设计流程概括
+  Simpling rate是指升采样倍数，要求为整数。
+
+  Copy samples是指升采样后的结果是持续的，还是只在升采样后的第一个clk出现，其余时间为低电平。
+
+- Clock Enable Probe模块，输出为时钟使能信号，输入为模型中的任意信号，输出是与该信号的采样率同频率的脉冲布尔量(Boolean)信号，一般用于多采样率系统。从上图可以看出时钟使能信号都是相应采样周期的周期脉冲。当生成硬件时，该模块将被忽略。
+
+## 6. 设计过程中的思考
+
+### 6.1 设计流程概括
 
 System Generator进行系统建模到完成一般包含以下四个步骤：
 
@@ -289,8 +319,16 @@ System Generator进行系统建模到完成一般包含以下四个步骤：
 3. 把双精度算法转换为定点算法。
 4. 把设计转换成有效的硬件。
 
-### 5.2 Simulink系统时间和硬件时钟频率
+### 6.2 Simulink系统时间和硬件时钟频率
 
 在Simulink中没有明确的时钟概念，FPGA的时钟信号周期也不等于仿真的时钟周期，而是由外部的时钟源信及内部DCM或者PLL共同决定的。在Sysgen中可以在System Generator模块的参数设置中为simulink系统周期和FPGA时钟频率指定具体的值，从而把simulink采样周期和FPGA硬件时钟周期联系起来。
 
 举个例子来说明，假设一个设计中有多个模块具有不同的采样周期，比如分别为2s和3s两个采样周期，那么Simulink的系统周期应设为其最大公因子即1s，如果FPGA系统时钟周期是10ns，那么Simuink系统周期、2s和3s两个采样周期分别对应FPGA期间实现时的10ns、20ns和30ns。**另一种做法是将Simulink系统周期就定为FPGA的系统时钟周期，省去了时钟周期间的换算。**
+
+## 7. 常见错误
+
+### 7.1 生成报告错误
+
+错误提示：Parsing of timing analysis data didn't complete successfully. Exiting the program。
+
+解决方法：在Simulink中右键单击xilinx令牌，悬停在"Xilinx工具"选项上。几秒钟后，Simulink会有 点颤抖，用户界面中的一些按钮可能会重新加载。
