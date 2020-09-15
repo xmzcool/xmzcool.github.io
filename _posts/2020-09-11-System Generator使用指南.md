@@ -200,13 +200,67 @@ Analyzer type中可以设置
 
 ## 4. 常见参数介绍
 
-- Precision
+- **Precision**
 
   XILINX Blockset库中的模块在仿真计算时按任意精度定点数进行，大部分模块的计算精度可由开发人员定义，包括位数(Number of Bits)和小数位(Binary Point)，如下图所示。
 
   ![](https://gitee.com/xmzcool/bloglmage/raw/master/img/Snipaste_2020-09-15_16-50-23.png)
 
   在默认情况下，模块的输出为全精度(Full Precision)，提供了足够的精度以保证结果不会出错。大部分模块具有用户自定义精度(User-Defined Percision)选项，开发人员可自行确定数据的位数和小数位。
+
+- **Arithmetic Type**
+
+  在模块的参数对话框中可以定义无符号位或带符号位(二进制补码)数作为模块的输出信号的数据类型。
+
+- **Number of bits**
+
+  定点数以何种数据格式进行存储由其位数、小数位和运算类型决定，System Generator支持的最大位数为4096。小数位必须介于0到位数之间。
+
+- **Overflow & Quantization**
+
+  一旦开发人员定义了数据的精度，就会产生由溢出和量化带来的误差。当一数值超过了开发人员定义的数据所能表示的范围，就产生了溢出误差；当开发人员定义的数据的小数部分无法完全表示实际输入的小数数值时，就出现量化误差。
+
+  对于开发人员定义的任意精度数据，System Generator都针对溢出和量化误差提供了多种处理方式。
+
+  当发生溢出时，开发人员有三种处理方式，当选择Saturate模式时，将数据饱和在正的最大值或负的最小值;当选择Wrap模式时，作绕回处理，即最大值加1结果是最小值，最小值减1得到最大值:当选择Flag as error模式时，将数据溢出标记到Simulink的错误报告中。
+
+  当出现量化误差时，开发人员有两种处理方式，当选择Round模式时，将数据四舍五入到最接近的开发人员定义精度可表示的数值上;当选择Truncate模式时，直接将开发人员定义精度无法表示部分数值丢弃。
+
+- **Latency**
+
+  许多XILINX Blockset库中的模块都具有延迟选项，定义该模块的输出信号延迟多少个采样周期后输出。System Generator中没有专门的模块或结构用于实现流水线，**给模块的输出添加延迟可以理解为在其输出端上存在有移位寄存器**，用以调节模块的处理时间，**使得不同的模块具有相同的处理时间**，实现流水线，提高系统处理速度。
+
+- **Provide synchronous reset port**
+
+  选中该选项，System Generator自动激活模块的复位端(rst)。当复位信号有效时，模块立即恢复到初始状态，复位信号必须为布尔量(Boolean)信号。
+
+- **Provide enable port**
+
+  选中该选项，System Generator 自动激活模块的使能端(en)。当使能信号无效时，模块保持当前状态，直到使能信号或复位信号有效时模块开始动作。复位信号的优先级高于使能信号，同样，使能信号也必须为布尔量(Boolean)信号。
+
+- **Sample period**
+
+  System Generator根据特定的采样率对数据流进行处理，通常每个模块按照采样率对输入信号进行采样并按照采样率输出信号，唯有Up Sample和Down Sample两个模块例外，分别用于实现提高、降低采样率。
+
+- **Specify explicit sample period**
+
+  如果选中该选项，开发人员可以按设计需要指定采样周期。该选项经常用于构成反馈回路的设计中，在反馈回路中，System Generator不能确定默认的采样率，因为回路的存在使得比较器的输入信号的采样率依据于尚未确定的反馈信号的采样率。在这种情况下，System Generator需要开发人员指定采样周期。
+
+- **Use behavioral HDL(otherwise use core)**
+
+  如果选中该选项，由MCode(MATLAB的M文件所用代码)仿真来生成行为级硬件描述语言，否则由IP核构成硬件描述语言。
+
+- **Use pre-defined core placement information**
+
+  如果选中该选项，生成的IP核包括相关的布局信息，通常使得最终得到的硬件具有较高的处理速度。也正因为IP核的布局会受到相应的约束，将影响到后续布局布线阶段的处理结果。
+
+- **Placement style**
+
+  当IP核布局信息选项被选中后，开发人员才可以设定布局风格选项。该选项用于直接设定模块在硬件上的布局。选中矩形(Rectangular shape)选项，FPGA 上相关查找表(LUTs)分布比较松散;选中三角(Triangular packing)选项，FPGA 上相关查找表(LUTs)分布比较紧凑。
+
+- **Define FPGA area for resource estimation / FPGA area (slices, FFs, BRAMs,LUTs, IOBs, emb. mults, TBUFs)**
+
+  Resource Estimator模块需要调用这部分信息，用于估算Resource Estimator模块所在的
 
 ## 5. 常见模块介绍
 
