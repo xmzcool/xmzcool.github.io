@@ -276,9 +276,44 @@ Analyzer type中可以设置
 
 只有XILINX模块才会在FPGA硬件中实现。
 
-### 5.1 
+### 5.1 Sysgen设置模块
 
-### 5.2 Sysgen中的信号类型
+![w66UyT.png](https://s1.ax1x.com/2020/09/15/w66UyT.png)
+
+System Generator模块给定整个系统控制和仿真的参数，并用于工程的生成。一个Simulink模型如果包含有XILINX Blockset库中的任意模块，都必须至少包含一个System Generator模块。通过设定System Generator模块决定怎样进行工程的生成和仿真。
+
+**模块参数说明：**
+
+- Compilation：设定编译类型，直接影响到代码生成器的生成结果。
+- Part：选择所使用的FPGA芯片。
+- Target directory：设定相关文件的导出路径，当输入为“./netist”时表示导出路径为当前MATLAB工作路径下的netlist 文件夹。
+- Synthesis tool：设定设计使用的综合工具。可选Synplicity公司的Synplify Pro、Synplify以及XILINX公司的XST。
+- Hardware description language：设定设计编译时使用的硬件描述语言。可选VHDL或Verilog。
+- FPGA clock period：以纳秒(ns)为单位设定硬件时钟周期。
+- Clock pin location：定义硬件时钟的管脚位置。该信息同样由约束文件传给XILINX执行工具。
+- Create testbench：要求System Generator创建硬件描述语言testbench测试文件。
+- Provide clock enable clear pin：要求System Generator在生成的设计的顶层模块上增加一个ce_ clr 端口。ce_clr 信号可复位系统时钟，使得该设计可以进行动态控制，仅在需要的时刻动作。
+- Simulink system period：以秒为单位定义Simulink仿真系统周期。
+- Block icon display：定义Simulink中各个System Generator的模块图的显示风格。共有六种显示风格。
+
+### 5.2 Sysgen输入输出
+
+**Gateway In：**
+
+![](https://gitee.com/xmzcool/bloglmage/raw/master/img/Snipaste_2020-09-15_20-52-53.png)
+
+Gateway In模块是System Generator模块与Simulink其他模块的数据接口，也就是设计模块的输入。Gateway In的输出数据为XILINX模块可接受的离散定点数。Gateway In模块还可对FPGA管脚进行约束定义。
+
+<img src="https://gitee.com/xmzcool/bloglmage/raw/master/img/Snipaste_2020-09-15_20-55-04.png" style="zoom:60%;" />
+
+Gateway In：
+
+![](https://gitee.com/xmzcool/bloglmage/raw/master/img/Snipaste_2020-09-15_21-01-42.png)
+
+XILINX Gateway out模块是XILINX模块与MATLAB其他模块的数据接口，Gateway out之前的数据类型为XILINX所支持的数据类型，但从
+Gateway out 输出的数据类型则是双精度浮点数。Gateway out模块还可对FPGA管脚进行约束定义。
+
+### 5.3 Sysgen中的信号类型
 
 为了提高硬件仿真精度，Sysgen中的模块采用了任意精度的定点数，最大支持4096位定点数，而在simulink中的连续时间的信号必须经过Gateway In模块采样成FPGA设计中的信号使用，输出经Gateway Out转变为simulink中的信号才可以实现两者互联。Sysgen共有如下3种信号类型：
 
@@ -348,7 +383,7 @@ System Generator中有两个与此相关的block：Convert和Reinterpret，都�
 
   ●未选中“Pipeline for maximum performance”时，**Latency以在IP核末尾增加一级移位寄存器的方式实现**，这样只是单纯的实现了延时功能。
 
-### 5.3 Sysgen中的时钟
+### 5.4 Sysgen中的时钟
 
 相关时钟概念见5.2章节。下面介绍一下时钟相关的模块。
 
