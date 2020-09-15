@@ -260,7 +260,17 @@ Analyzer type中可以设置
 
 - **Define FPGA area for resource estimation / FPGA area (slices, FFs, BRAMs,LUTs, IOBs, emb. mults, TBUFs)**
 
-  Resource Estimator模块需要调用这部分信息，用于估算Resource Estimator模块所在的
+  Resource Estimator模块需要调用这部分信息，用于估算Resource Estimator模块所在的System Generator设计模型需要多少FPGA硬件资源。
+
+  如果在System Generator 设计中包含有Resource Estimator模块，开发人员可以手动定义任意功能模块的FPGA资源使用量。如果没有输入任何参数，Resource Estimator 模块会自动计算相关数据并给出所需资源总量。
+
+  如果开发人员希望自行定义设计中的每一功能 模块的FPGA资源使用量，就必须选中Define FPGA area for resource estimation 选项，Resource Estimator模块才会在处理时严格按照开发人员设定的参数进行计算;否则Resource Estimator模块的计算结果会覆盖开发人员设定的任意参数。
+
+  一共有七个参数需要输入FPGA area栏，在填写时需要注意其先后顺序。七个参数依次表示本模块slices、触发器(FFs)、块状RAM(BRAMs)、查找表(LUTs)、IO模块(IOBs)、嵌入式乘法器(emb. mults)、三态缓存器(TBUFs)的使用量。Resource Estimator 模块进行处理时仅考虑需要占用硬件资源的模块，略过不占用硬件资源的模块，如Clock Enable Probe模块等。虽然Slice和LUT、FF是有关联的(每个Slice中包含有两个LUT和两个FF)，但在计算使用资源量时需要分别计算，因为在一个Slice中，不一定同时用到LUT和FF,并且不同的设计会有不同的结果。
+
+- **Pipeline for maximum performance**
+
+  在使用IP核构成设计模块时可在其内部构成流水线结构以提高处理速度，选中该选项System Generator可以最大限度利用模块的延迟时间构成流水线结构。
 
 ## 5. 常见模块介绍
 
